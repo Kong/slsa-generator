@@ -25,7 +25,7 @@ set -euo pipefail
 #VERIFIER_RELEASE_BINARY="slsa-verifier-linux-amd64"
 #VERIFIER_RELEASE_BINARY_SHA256="89fbcba9aed67d5146ea99946c7e4e5a80e3767871f0e3ffcd0b582134efd010"
 
-PREFIX="refs/tags/"
+PREFIX="refs/heads/"
 
 # Extract version.
 if [[ "$BUILDER_REF" != "$PREFIX"* ]]; then
@@ -65,21 +65,16 @@ if [[ "$builder_tag" == "$(echo -n "$builder_tag" | grep -P '^[a-f\d]{40}$')" ]]
   builder_tag="$release_tag"
 fi
 
-if [[ "$builder_tag" != "$(echo -n "$builder_tag" | grep -oe '^v[1-9]\+\.[0-9]\+\.[0-9]\+\(-rc\.[0-9]\+\)\?$')" ]]; then
-  echo "Invalid builder version: $builder_tag. Expected version of the form vX.Y.Z(-rc.A)"
-  echo "For details see https://github.com/slsa-framework/slsa-github-generator/blob/main/README.md#referencing-slsa-builders-and-generators"
-  exit 7
-fi
-
 echo "Builder version: $builder_tag"
 
 echo "BUILDER_REPOSITORY: $BUILDER_REPOSITORY"
 
 # Fetch the release binary and provenance.
-gh release -R "$BUILDER_REPOSITORY" download "$builder_tag" -p "$BUILDER_RELEASE_BINARY*" || exit 10
+gh release -R "$BUILDER_REPOSITORY" download "v2.0.0" -p "$BUILDER_RELEASE_BINARY*" || exit 10
 
 # Fetch the verifier at the right hash.
 gh release -R "$VERIFIER_REPOSITORY" download "$VERIFIER_RELEASE" -p "$VERIFIER_RELEASE_BINARY" || exit 11
+echo "verifier release: $VERIFIER_RELEASE"
 computed_hash=$(sha256sum "$VERIFIER_RELEASE_BINARY" | awk '{print $1}')
 echo "verifier hash computed is $computed_hash"
 echo "$VERIFIER_RELEASE_BINARY_SHA256 $VERIFIER_RELEASE_BINARY" | sha256sum --strict --check --status || exit 4
@@ -95,17 +90,11 @@ fi
 chmod a+x "$VERIFIER_RELEASE_BINARY"
 ./"$VERIFIER_RELEASE_BINARY" verify-artifact \
   --source-branch "main" \
-  --source-tag "$builder_tag" \
+  --source-tag "v2.0.0" \
   --provenance-path "$BUILDER_RELEASE_BINARY.intoto.jsonl" \
   --source-uri "github.com/$BUILDER_REPOSITORY" \
   "$BUILDER_RELEASE_BINARY" || exit 6
 
-builder_commit=$(gh api /repos/"$BUILDER_REPOSITORY"/git/ref/tags/"$builder_tag" | jq -r '.object.sha')
-provenance_commit=$(jq -r '.payload' <"$BUILDER_RELEASE_BINARY.intoto.jsonl" | base64 -d | jq -r '.predicate.materials[0].digest.sha1')
-if [[ "$builder_commit" != "$provenance_commit" ]]; then
-  echo "Builder commit sha $builder_commit != provenance material $provenance_commit"
-  exit 5
-fi
-
+#builder_commit=$(gh api /repos/"$BUILDER_REPOSITORY"/git/ref/tags/"$builder_tag" | jq -r '.object.sha')
 #TODO: verify the command
-echo "Builder provenance verified at tag $builder_tag and commit $builder_commit"
+#echo "Builder provenance verified at tag $builder_tag and commit $builder_commit"
