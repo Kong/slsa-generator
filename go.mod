@@ -1,4 +1,4 @@
-module github.com/slsa-framework/slsa-github-generator
+module github.com/Kong/slsa-github-generator
 
 go 1.23.1
 

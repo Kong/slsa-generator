@@ -35,11 +35,11 @@ export function validateGitHubFields(gho: githubObj): void {
   );
 
   // Validate the event. Only events in
-  // https://github.com/slsa-framework/github-actions-buildtypes/tree/main/workflow/v1
+  // https://github.com/Kong/github-actions-buildtypes/tree/main/workflow/v1
   // are supported.
   validateFieldAnyOf("GITHUB_EVENT_NAME", process.env.GITHUB_EVENT_NAME, [
     "create",
-    // TODO(github.com/slsa-framework/github-actions-buildtypes/issues/6): Revisit the deployment event type.
+    // TODO(github.com/Kong/github-actions-buildtypes/issues/6): Revisit the deployment event type.
     // "deployment",
     "release",
     "push",
